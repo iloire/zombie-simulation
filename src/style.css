@@ -1,3 +1,7 @@
+:root {
+  --night: 0;
+}
+
 *,
 *::before,
 *::after {
@@ -37,29 +41,58 @@ html, body {
   display: flex;
   gap: 10px;
   align-items: center;
-  background: rgba(10, 10, 15, 0.85);
+  background: color-mix(
+    in srgb,
+    rgba(10, 10, 15, 0.85),
+    rgba(5, 5, 35, 0.9) calc(var(--night) * 100%)
+  );
   backdrop-filter: blur(8px);
   padding: 10px 18px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid color-mix(
+    in srgb,
+    rgba(255, 255, 255, 0.06),
+    rgba(60, 60, 180, 0.2) calc(var(--night) * 100%)
+  );
   pointer-events: auto;
+  transition: background 0.8s, border-color 0.8s;
 }
 
 #controls button {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #c8c8d0;
+  background: color-mix(
+    in srgb,
+    rgba(255, 255, 255, 0.08),
+    rgba(40, 40, 120, 0.25) calc(var(--night) * 100%)
+  );
+  border: 1px solid color-mix(
+    in srgb,
+    rgba(255, 255, 255, 0.1),
+    rgba(60, 60, 180, 0.3) calc(var(--night) * 100%)
+  );
+  color: color-mix(
+    in srgb,
+    #c8c8d0,
+    #8888cc calc(var(--night) * 100%)
+  );
   padding: 6px 16px;
   border-radius: 6px;
   font-family: 'JetBrains Mono', monospace;
   font-size: 12px;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background 0.3s, border-color 0.3s, color 0.8s;
 }
 
 #controls button:hover {
-  background: rgba(255, 255, 255, 0.14);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: color-mix(
+    in srgb,
+    rgba(255, 255, 255, 0.14),
+    rgba(60, 60, 160, 0.35) calc(var(--night) * 100%)
+  );
+  border-color: color-mix(
+    in srgb,
+    rgba(255, 255, 255, 0.2),
+    rgba(80, 80, 200, 0.4) calc(var(--night) * 100%)
+  );
 }
 
 #speed-label {
@@ -68,12 +101,21 @@ html, body {
   gap: 8px;
   font-family: 'JetBrains Mono', monospace;
   font-size: 12px;
-  color: #888;
+  color: color-mix(
+    in srgb,
+    #888,
+    #6666aa calc(var(--night) * 100%)
+  );
+  transition: color 0.8s;
 }
 
 #speed-slider {
   width: 80px;
-  accent-color: #ff2e2e;
+  accent-color: color-mix(
+    in srgb,
+    #ff2e2e,
+    #6644cc calc(var(--night) * 100%)
+  );
 }
 
 #speed-value {

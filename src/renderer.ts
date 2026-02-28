@@ -7,6 +7,7 @@ import type { SimStats, PopSample } from './simulation.ts';
 export class Renderer {
   private ctx: CanvasRenderingContext2D;
   private canvas: HTMLCanvasElement;
+  private currentNight = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -30,11 +31,19 @@ export class Renderer {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
 
-  drawObstacles(obstacles: Obstacle[]): void {
+  drawObstacles(obstacles: Obstacle[], nightFactor: number): void {
     const { ctx } = this;
+    // Interpolate obstacle colors between day and night
+    const r = Math.round(26 - nightFactor * 10);
+    const g = Math.round(26 - nightFactor * 10);
+    const b = Math.round(46 + nightFactor * 20);
+    const br = Math.round(42 - nightFactor * 12);
+    const bg = Math.round(42 - nightFactor * 12);
+    const bb = Math.round(62 + nightFactor * 30);
+
     for (const obs of obstacles) {
-      ctx.fillStyle = CONFIG.colors.obstacle;
-      ctx.strokeStyle = CONFIG.colors.obstacleBorder;
+      ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+      ctx.strokeStyle = `rgb(${br}, ${bg}, ${bb})`;
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.roundRect(obs.x, obs.y, obs.w, obs.h, 3);
@@ -43,7 +52,8 @@ export class Renderer {
     }
   }
 
-  drawAgents(agents: AgentState[], frame: number): void {
+  drawAgents(agents: AgentState[], frame: number, nightFactor: number): void {
+    this.currentNight = nightFactor;
     for (const agent of agents) {
       switch (agent.type) {
         case AgentType.Human: this.drawHuman(agent); break;
@@ -55,18 +65,23 @@ export class Renderer {
   }
 
   private drawHuman(agent: AgentState): void {
-    const { ctx } = this;
+    const { ctx, currentNight } = this;
     const { pos } = agent;
     const r = CONFIG.agentRadius;
 
+    // Glow shrinks and dims at night (humans hide)
+    const glowAlpha = 0.15 - currentNight * 0.08;
+    const glowSize = r * (3 - currentNight * 1.2);
     ctx.beginPath();
-    ctx.arc(pos.x, pos.y, r * 3, 0, Math.PI * 2);
-    ctx.fillStyle = CONFIG.colors.humanGlow;
+    ctx.arc(pos.x, pos.y, glowSize, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(78, 205, 196, ${glowAlpha})`;
     ctx.fill();
 
+    // Body dims slightly at night
+    const bright = Math.round(205 - currentNight * 50);
     ctx.beginPath();
     ctx.arc(pos.x, pos.y, r, 0, Math.PI * 2);
-    ctx.fillStyle = CONFIG.colors.human;
+    ctx.fillStyle = `rgb(78, ${bright}, ${bright - 10})`;
     ctx.fill();
   }
 
@@ -161,8 +176,21 @@ export class Renderer {
   drawNightOverlay(nightFactor: number): void {
     if (nightFactor < 0.01) return;
     const { ctx, canvas } = this;
-    ctx.fillStyle = `rgba(0, 0, 20, ${nightFactor * 0.35})`;
+    // Deep blue overlay — strong enough to clearly distinguish night
+    ctx.fillStyle = `rgba(0, 0, 30, ${nightFactor * 0.55})`;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Subtle blue vignette intensifies at night edges
+    if (nightFactor > 0.3) {
+      const gradient = ctx.createRadialGradient(
+        canvas.width / 2, canvas.height / 2, canvas.width * 0.15,
+        canvas.width / 2, canvas.height / 2, canvas.width * 0.6,
+      );
+      gradient.addColorStop(0, 'transparent');
+      gradient.addColorStop(1, `rgba(0, 0, 40, ${(nightFactor - 0.3) * 0.4})`);
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
   }
 
   drawHeatmap(agents: AgentState[]): void {
@@ -239,24 +267,39 @@ export class Renderer {
     let y = 30;
     const lineHeight = 22;
 
-    ctx.fillStyle = CONFIG.colors.uiBackground;
+    // Panel background shifts blue at night
+    const panelR = Math.round(10 - nightFactor * 5);
+    const panelG = Math.round(10 - nightFactor * 5);
+    const panelB = Math.round(15 + nightFactor * 20);
+    ctx.fillStyle = `rgba(${panelR}, ${panelG}, ${panelB}, 0.85)`;
     ctx.beginPath();
     ctx.roundRect(x - 10, y - 20, 210, 195, 8);
     ctx.fill();
+
+    // Thin accent border that shifts with day/night
+    const borderAlpha = 0.08 + nightFactor * 0.12;
+    const borderB2 = Math.round(100 + nightFactor * 155);
+    ctx.strokeStyle = `rgba(80, 80, ${borderB2}, ${borderAlpha})`;
+    ctx.lineWidth = 1;
+    ctx.stroke();
 
     ctx.font = '700 14px "JetBrains Mono", monospace';
 
     ctx.fillStyle = statusColor;
     ctx.fillText(status, x, y);
 
-    // Day/night badge
+    // Day/night badge with icon
     ctx.fillStyle = todColor;
     ctx.font = '600 11px "JetBrains Mono", monospace';
-    ctx.fillText(timeOfDay, x + 140, y);
+    const todIcon = nightFactor > 0.5 ? '\u263D' : '\u2600'; // moon / sun
+    ctx.fillText(`${todIcon} ${timeOfDay}`, x + 130, y);
 
     y += lineHeight;
+    // Text color dims slightly at night
+    const textBright = Math.round(200 - nightFactor * 40);
+    const textBlue = Math.round(208 + nightFactor * 30);
     ctx.font = '400 13px "JetBrains Mono", monospace';
-    ctx.fillStyle = CONFIG.colors.uiText;
+    ctx.fillStyle = `rgb(${textBright}, ${textBright}, ${textBlue})`;
     ctx.fillText(`Time: ${timeStr}`, x, y);
     y += lineHeight + 4;
 
@@ -276,7 +319,7 @@ export class Renderer {
     ctx.fillText(`Dead:     ${stats.dead}`, x, y);
   }
 
-  drawSparkline(history: PopSample[]): void {
+  drawSparkline(history: PopSample[], nightFactor: number): void {
     if (history.length < 2) return;
 
     const { ctx } = this;
@@ -285,11 +328,18 @@ export class Renderer {
     const w = 200;
     const h = 60;
 
-    // Background
-    ctx.fillStyle = CONFIG.colors.uiBackground;
+    // Background shifts blue at night
+    const panelR = Math.round(10 - nightFactor * 5);
+    const panelG = Math.round(10 - nightFactor * 5);
+    const panelB = Math.round(15 + nightFactor * 20);
+    ctx.fillStyle = `rgba(${panelR}, ${panelG}, ${panelB}, 0.85)`;
     ctx.beginPath();
     ctx.roundRect(x, y, w, h, 6);
     ctx.fill();
+    const borderB = Math.round(100 + nightFactor * 155);
+    ctx.strokeStyle = `rgba(80, 80, ${borderB}, ${0.08 + nightFactor * 0.12})`;
+    ctx.lineWidth = 1;
+    ctx.stroke();
 
     const maxPop = Math.max(
       ...history.map(s => s.humans + s.infected + s.zombies),

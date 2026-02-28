@@ -89,16 +89,20 @@ function loop(): void {
   sound.updateNight(sim.nightFactor);
 
   // Render
+  const night = sim.nightFactor;
   renderer.clear();
-  renderer.drawObstacles(sim.obstacles);
-  renderer.drawAgents(sim.agents, sim.frame);
+  renderer.drawObstacles(sim.obstacles, night);
+  renderer.drawAgents(sim.agents, sim.frame, night);
   if (showHeatmap) {
     renderer.drawHeatmap(sim.agents);
   }
-  renderer.drawNightOverlay(sim.nightFactor);
+  renderer.drawNightOverlay(night);
   const stats = sim.getStats();
-  renderer.drawStats(stats, sim.nightFactor);
-  renderer.drawSparkline(sim.history);
+  renderer.drawStats(stats, night);
+  renderer.drawSparkline(sim.history, night);
+
+  // Update CSS controls theme with night factor
+  document.documentElement.style.setProperty('--night', String(night));
 }
 
 requestAnimationFrame(loop);
