@@ -49,8 +49,27 @@ btnHeatmap.addEventListener('click', () => {
   btnHeatmap.textContent = showHeatmap ? 'Heatmap ON' : 'Heatmap';
 });
 
-// Keyboard shortcut for heatmap
+// Help modal
+const btnHelp = document.getElementById('btn-help') as HTMLButtonElement;
+const helpOverlay = document.getElementById('help-overlay') as HTMLDivElement;
+const helpClose = document.getElementById('help-close') as HTMLButtonElement;
+
+function toggleHelp(): void {
+  helpOverlay.classList.toggle('hidden');
+}
+
+btnHelp.addEventListener('click', toggleHelp);
+helpClose.addEventListener('click', toggleHelp);
+helpOverlay.addEventListener('click', (e) => {
+  if (e.target === helpOverlay) toggleHelp();
+});
+
+// Keyboard shortcuts
 window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !helpOverlay.classList.contains('hidden')) {
+    toggleHelp();
+    return;
+  }
   if (e.key === 'h' || e.key === 'H') {
     showHeatmap = !showHeatmap;
     btnHeatmap.textContent = showHeatmap ? 'Heatmap ON' : 'Heatmap';

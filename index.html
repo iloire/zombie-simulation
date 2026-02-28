@@ -21,6 +21,29 @@
           <input id="speed-slider" type="range" min="0.25" max="3" step="0.25" value="1" />
           <span id="speed-value">1x</span>
         </label>
+        <button id="btn-help">?</button>
+      </div>
+    </div>
+
+    <div id="help-overlay" class="hidden">
+      <div id="help-modal">
+        <button id="help-close">&times;</button>
+        <h2>How it works</h2>
+        <p><strong>300 humans</strong> spawn across a dark map scattered with random buildings. A single <strong>Patient Zero</strong> shambles out from the center. Agents use weighted steering forces (flee, seek, wander, cohesion, separation) to move each frame, with a spatial grid keeping neighbor lookups fast.</p>
+        <p>When a zombie gets within bite range of a human, that human becomes <strong>infected</strong> — visibly pulsating orange-to-red — and after 5–15 seconds turns into one of three zombie variants:</p>
+        <ul>
+          <li><strong>Shamblers</strong> (60%) — slow, steady, the backbone of every horde</li>
+          <li><strong>Runners</strong> (25%) — fast with a jittery outline, but burn out and die after ~10 s</li>
+          <li><strong>Tanks</strong> (15%) — large, slow, hard to miss</li>
+        </ul>
+        <p>A <strong>day/night cycle</strong> shifts every 30 s. At night a blue overlay drops, zombies speed up 1.4×, and the ambient drone deepens. Buildings block movement and create chokepoints where survivors cluster — then get cornered.</p>
+        <h3>Controls</h3>
+        <table>
+          <tr><td><kbd>Click</kbd> canvas</td><td>Drop a new zombie</td></tr>
+          <tr><td><kbd>Space</kbd></td><td>Pause / resume</td></tr>
+          <tr><td><kbd>H</kbd></td><td>Toggle heatmap</td></tr>
+          <tr><td>Speed slider</td><td>0.25× — 3× speed</td></tr>
+        </table>
       </div>
     </div>
     <script type="module" src="/src/main.ts"></script>
