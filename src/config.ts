@@ -9,9 +9,9 @@ export const CONFIG = {
   // Speeds (px/frame)
   humanSpeed: 2.2,
   infectedSpeed: 1.2,
-  zombieSpeed: 1.4,
-  runnerSpeed: 3.2,
-  tankSpeed: 0.8,
+  zombieSpeed: 1.9,
+  runnerSpeed: 3.4,
+  tankSpeed: 0.9,
 
   // Zombie variants
   runnerHp: 1,
@@ -21,20 +21,20 @@ export const CONFIG = {
   runnerLifespan: 600, // ~10s at 60fps before runner dies
 
   // Perception radii (px)
-  humanFleeRadius: 120,
+  humanFleeRadius: 80,
   zombieSeekRadius: 200,
   cohesionRadius: 60,
   separationRadius: 16,
 
   // Infection
-  biteRange: 10,
+  biteRange: 14,
   incubationFrames: { min: 300, max: 900 },
 
   // Variant spawn weights (when infected turns)
   variantWeights: { shambler: 0.6, runner: 0.25, tank: 0.15 },
 
   // Steering weights
-  fleeWeight: 3.0,
+  fleeWeight: 2.2,
   seekWeight: 2.0,
   separationWeight: 2.5,
   cohesionWeight: 0.3,
