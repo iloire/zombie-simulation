@@ -1,21 +1,18 @@
-import type { AgentState, Vec2 } from './types.ts';
+import type { AgentState, Vec2, Obstacle } from './types.ts';
 import { AgentType } from './types.ts';
 import { CONFIG } from './config.ts';
 import { sub, normalize, scale, add, distSq, vec2, length } from './vec2.ts';
 
-/** Random wander: smoothly varying angle */
 export function wander(agent: AgentState): Vec2 {
   agent.wanderAngle += (Math.random() - 0.5) * 2 * CONFIG.wanderJitter;
   return vec2(Math.cos(agent.wanderAngle), Math.sin(agent.wanderAngle));
 }
 
-/** Seek: steer toward a target position */
 export function seek(agent: AgentState, target: Vec2): Vec2 {
   const desired = sub(target, agent.pos);
   return normalize(desired);
 }
 
-/** Flee: steer away from the nearest threat */
 export function flee(agent: AgentState, threats: AgentState[], radius: number): Vec2 {
   const radiusSq = radius * radius;
   let closestDist = Infinity;
@@ -36,7 +33,6 @@ export function flee(agent: AgentState, threats: AgentState[], radius: number): 
   return normalize(away);
 }
 
-/** Seek nearest human for zombies */
 export function seekNearest(agent: AgentState, targets: AgentState[], radius: number): Vec2 {
   const radiusSq = radius * radius;
   let closestDist = Infinity;
@@ -55,7 +51,6 @@ export function seekNearest(agent: AgentState, targets: AgentState[], radius: nu
   return seek(agent, closestTarget.pos);
 }
 
-/** Separation: push away from very close agents */
 export function separation(agent: AgentState, neighbors: AgentState[]): Vec2 {
   const radiusSq = CONFIG.separationRadius * CONFIG.separationRadius;
   let force = vec2(0, 0);
@@ -67,7 +62,6 @@ export function separation(agent: AgentState, neighbors: AgentState[]): Vec2 {
     const d = distSq(agent.pos, n.pos);
     if (d > 0 && d < radiusSq) {
       const away = normalize(sub(agent.pos, n.pos));
-      // Weight inversely by distance
       const weight = 1 - Math.sqrt(d) / CONFIG.separationRadius;
       force = add(force, scale(away, weight));
       count++;
@@ -77,7 +71,6 @@ export function separation(agent: AgentState, neighbors: AgentState[]): Vec2 {
   return count > 0 ? normalize(force) : force;
 }
 
-/** Cohesion: steer toward centroid of nearby same-type agents */
 export function cohesion(agent: AgentState, neighbors: AgentState[]): Vec2 {
   const radiusSq = CONFIG.cohesionRadius * CONFIG.cohesionRadius;
   let cx = 0;
@@ -101,4 +94,26 @@ export function cohesion(agent: AgentState, neighbors: AgentState[]): Vec2 {
   cy /= count;
   const desired = sub(vec2(cx, cy), agent.pos);
   return length(desired) > 0 ? normalize(desired) : vec2(0, 0);
+}
+
+export function avoidObstacles(agent: AgentState, obstacles: Obstacle[]): Vec2 {
+  let force = vec2(0, 0);
+  const lookAhead = 30;
+
+  for (const obs of obstacles) {
+    // Find closest point on obstacle rect to agent
+    const closestX = Math.max(obs.x, Math.min(agent.pos.x, obs.x + obs.w));
+    const closestY = Math.max(obs.y, Math.min(agent.pos.y, obs.y + obs.h));
+    const dx = agent.pos.x - closestX;
+    const dy = agent.pos.y - closestY;
+    const dSq = dx * dx + dy * dy;
+
+    if (dSq < lookAhead * lookAhead && dSq > 0) {
+      const d = Math.sqrt(dSq);
+      const weight = 1 - d / lookAhead;
+      force = add(force, scale(vec2(dx / d, dy / d), weight));
+    }
+  }
+
+  return length(force) > 0 ? normalize(force) : force;
 }

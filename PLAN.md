@@ -107,47 +107,49 @@ Bottom controls:
 src/
   main.ts           — entry point, canvas setup, game loop
   simulation.ts     — Simulation class (tick, add/remove agents)
-  agent.ts          — Agent class (position, velocity, type, update)
+  agent.ts          — agent creation, per-frame update, infection check
   steering.ts       — steering behavior functions (seek, flee, wander, cohesion, separation)
   spatial-grid.ts   — SpatialGrid class for neighbor lookups
   renderer.ts       — all canvas drawing (agents, trails, UI overlay)
+  vec2.ts           — vector math utilities (add, sub, normalize, limit, dist)
+  sound.ts          — Web Audio ambient drone + infection stab SFX
   config.ts         — tunable constants (speeds, radii, population, colors)
-  types.ts          — shared type definitions
+  types.ts          — shared type definitions (AgentType, ZombieVariant, Vec2, AgentState, Obstacle)
 ```
 
 ## Implementation Phases
 
-### Phase 1 — Core simulation (get agents moving)
-1. Project setup: Vite + TypeScript, canvas filling viewport
-2. Agent class with position, velocity, type enum
-3. Basic wander steering
-4. Render loop: draw colored circles on dark canvas
-5. Spatial grid for neighbor queries
+### Phase 1 — Core simulation ✅
+- [x] Project setup: Vite + TypeScript, canvas filling viewport
+- [x] Agent class with position, velocity, type
+- [x] Basic wander steering
+- [x] Render loop: draw colored circles on dark canvas
+- [x] Spatial grid for neighbor queries
 
-### Phase 2 — Infection mechanics
-1. Zombie seek behavior (chase nearest human)
-2. Human flee behavior (run from nearest zombie)
-3. Bite detection → human becomes infected
-4. Incubation timer → infected becomes zombie
-5. Patient Zero with distinct visual
+### Phase 2 — Infection mechanics ✅
+- [x] Zombie seek behavior (chase nearest human)
+- [x] Human flee behavior (run from nearest zombie)
+- [x] Bite detection → human becomes infected
+- [x] Incubation timer → infected becomes zombie
+- [x] Patient Zero with distinct visual (white ring)
 
-### Phase 3 — Emergent behavior polish
-1. Cohesion + separation forces
-2. Zombie horde formation (weak mutual attraction)
-3. Human grouping behavior
-4. Movement trails (fading position history)
-5. Agent pulsing/glow effects
+### Phase 3 — Emergent behavior polish ✅
+- [x] Cohesion + separation forces
+- [x] Zombie horde formation (weak mutual attraction)
+- [x] Human grouping behavior
+- [x] Movement trails (fading position history)
+- [x] Agent pulsing/glow effects (infected pulsates orange→red)
 
-### Phase 4 — UI and interactivity
-1. Stats overlay (population counters, outbreak status)
-2. Speed control slider
-3. Pause/play/restart controls
-4. Click-to-place zombie
-5. Population graph over time (small sparkline)
+### Phase 4 — UI and interactivity ✅
+- [x] Stats overlay (population counters, outbreak status)
+- [x] Speed control slider (0.25x–3x)
+- [x] Pause/play/restart controls
+- [x] Click-to-place zombie
+- [x] Population graph over time (small sparkline)
 
-### Phase 5 (stretch) — Advanced features
-- Zombie types: runners (fast, fragile), tanks (slow, large detection radius)
-- Day/night cycle (darken canvas, zombies get faster at night)
-- Simple obstacles/buildings (rectangles that block movement + line-of-sight)
-- Sound: ambient dread + spike on infection events
-- Heatmap overlay toggle (zombie density visualization)
+### Phase 5 — Advanced features ✅
+- [x] Zombie types: runners (fast, fragile, short-lived), tanks (slow, large, thick ring)
+- [x] Day/night cycle (blue overlay, zombies faster at night, ambient drone deepens)
+- [x] Simple obstacles/buildings (random rectangles with collision + steering avoidance)
+- [x] Sound: ambient sawtooth drone + dissonant stab on infection events
+- [x] Heatmap overlay toggle (H key or button, zombie density heat grid)

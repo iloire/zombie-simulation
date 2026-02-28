@@ -1,7 +1,8 @@
-import type { AgentState } from './types.ts';
-import { AgentType } from './types.ts';
+import type { AgentState, Obstacle } from './types.ts';
+import { AgentType, ZombieVariant } from './types.ts';
 import { CONFIG } from './config.ts';
-import type { SimStats } from './simulation.ts';
+import { agentRadius } from './agent.ts';
+import type { SimStats, PopSample } from './simulation.ts';
 
 export class Renderer {
   private ctx: CanvasRenderingContext2D;
@@ -19,7 +20,6 @@ export class Renderer {
     ctx.fillStyle = CONFIG.colors.background;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Radial vignette
     const gradient = ctx.createRadialGradient(
       canvas.width / 2, canvas.height / 2, canvas.width * 0.2,
       canvas.width / 2, canvas.height / 2, canvas.width * 0.7,
@@ -30,12 +30,25 @@ export class Renderer {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
 
+  drawObstacles(obstacles: Obstacle[]): void {
+    const { ctx } = this;
+    for (const obs of obstacles) {
+      ctx.fillStyle = CONFIG.colors.obstacle;
+      ctx.strokeStyle = CONFIG.colors.obstacleBorder;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(obs.x, obs.y, obs.w, obs.h, 3);
+      ctx.fill();
+      ctx.stroke();
+    }
+  }
+
   drawAgents(agents: AgentState[], frame: number): void {
     for (const agent of agents) {
       switch (agent.type) {
         case AgentType.Human: this.drawHuman(agent); break;
         case AgentType.Infected: this.drawInfected(agent, frame); break;
-        case AgentType.Zombie: this.drawZombie(agent); break;
+        case AgentType.Zombie: this.drawZombie(agent, frame); break;
         case AgentType.Dead: this.drawDead(agent); break;
       }
     }
@@ -46,13 +59,11 @@ export class Renderer {
     const { pos } = agent;
     const r = CONFIG.agentRadius;
 
-    // Glow
     ctx.beginPath();
     ctx.arc(pos.x, pos.y, r * 3, 0, Math.PI * 2);
     ctx.fillStyle = CONFIG.colors.humanGlow;
     ctx.fill();
 
-    // Body
     ctx.beginPath();
     ctx.arc(pos.x, pos.y, r, 0, Math.PI * 2);
     ctx.fillStyle = CONFIG.colors.human;
@@ -64,30 +75,26 @@ export class Renderer {
     const { pos } = agent;
     const r = CONFIG.agentRadius;
 
-    // Pulsate between orange and red
     const pulse = (Math.sin(frame * 0.15) + 1) / 2;
     const pulseRadius = r + pulse * 2;
 
-    // Glow
     ctx.beginPath();
     ctx.arc(pos.x, pos.y, pulseRadius * 3, 0, Math.PI * 2);
     ctx.fillStyle = `rgba(255, 107, 53, ${0.1 + pulse * 0.1})`;
     ctx.fill();
 
-    // Body — interpolate orange to red
     ctx.beginPath();
     ctx.arc(pos.x, pos.y, pulseRadius, 0, Math.PI * 2);
-    const red = Math.round(255);
     const green = Math.round(107 - pulse * 61);
     const blue = Math.round(53 - pulse * 7);
-    ctx.fillStyle = `rgb(${red}, ${green}, ${blue})`;
+    ctx.fillStyle = `rgb(255, ${green}, ${blue})`;
     ctx.fill();
   }
 
-  private drawZombie(agent: AgentState): void {
+  private drawZombie(agent: AgentState, frame: number): void {
     const { ctx } = this;
     const { pos, trail } = agent;
-    const r = CONFIG.agentRadius;
+    const r = agentRadius(agent);
 
     // Trail
     for (let i = 0; i < trail.length; i++) {
@@ -100,11 +107,37 @@ export class Renderer {
       ctx.fill();
     }
 
-    // Body
+    // Color by variant
+    let color: string;
+    switch (agent.variant) {
+      case ZombieVariant.Runner: color = CONFIG.colors.runner; break;
+      case ZombieVariant.Tank: color = CONFIG.colors.tank; break;
+      default: color = CONFIG.colors.zombie; break;
+    }
+
     ctx.beginPath();
     ctx.arc(pos.x, pos.y, r, 0, Math.PI * 2);
-    ctx.fillStyle = CONFIG.colors.zombie;
+    ctx.fillStyle = color;
     ctx.fill();
+
+    // Runner: jittery outline
+    if (agent.variant === ZombieVariant.Runner) {
+      const jitter = Math.sin(frame * 0.5) * 1.5;
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, r + 2 + jitter, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(204, 51, 0, 0.4)`;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+
+    // Tank: thick ring
+    if (agent.variant === ZombieVariant.Tank) {
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, r + 2, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(74, 0, 32, 0.7)`;
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+    }
 
     // Patient zero ring
     if (agent.isPatientZero) {
@@ -125,7 +158,51 @@ export class Renderer {
     ctx.fill();
   }
 
-  drawStats(stats: SimStats): void {
+  drawNightOverlay(nightFactor: number): void {
+    if (nightFactor < 0.01) return;
+    const { ctx, canvas } = this;
+    ctx.fillStyle = `rgba(0, 0, 20, ${nightFactor * 0.35})`;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  drawHeatmap(agents: AgentState[]): void {
+    const { ctx, canvas } = this;
+    const cellSize = CONFIG.heatmapCellSize;
+    const cols = Math.ceil(canvas.width / cellSize);
+    const rows = Math.ceil(canvas.height / cellSize);
+
+    // Count zombies per cell
+    const grid = new Uint16Array(cols * rows);
+    let maxCount = 0;
+
+    for (const agent of agents) {
+      if (agent.type !== AgentType.Zombie) continue;
+      const col = Math.floor(agent.pos.x / cellSize);
+      const row = Math.floor(agent.pos.y / cellSize);
+      if (col >= 0 && col < cols && row >= 0 && row < rows) {
+        const idx = row * cols + col;
+        grid[idx]++;
+        if (grid[idx] > maxCount) maxCount = grid[idx];
+      }
+    }
+
+    if (maxCount === 0) return;
+
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        const count = grid[row * cols + col];
+        if (count === 0) continue;
+        const intensity = count / maxCount;
+        const alpha = intensity * CONFIG.heatmapMaxAlpha;
+        // Red to yellow gradient
+        const g = Math.round(intensity * 80);
+        ctx.fillStyle = `rgba(200, ${g}, 0, ${alpha})`;
+        ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+      }
+    }
+  }
+
+  drawStats(stats: SimStats, nightFactor: number): void {
     const { ctx } = this;
     const total = stats.humans + stats.infected + stats.zombies;
     const zombieRatio = total > 0 ? (stats.zombies + stats.infected) / total : 0;
@@ -154,29 +231,35 @@ export class Renderer {
     const secs = seconds % 60;
     const timeStr = `${minutes}:${secs.toString().padStart(2, '0')}`;
 
+    // Day/night indicator
+    const timeOfDay = nightFactor > 0.5 ? 'NIGHT' : 'DAY';
+    const todColor = nightFactor > 0.5 ? '#4466aa' : '#aa8833';
+
     const x = 20;
     let y = 30;
     const lineHeight = 22;
 
-    // Background panel
     ctx.fillStyle = CONFIG.colors.uiBackground;
     ctx.beginPath();
-    ctx.roundRect(x - 10, y - 20, 200, 165, 8);
+    ctx.roundRect(x - 10, y - 20, 210, 195, 8);
     ctx.fill();
 
     ctx.font = '700 14px "JetBrains Mono", monospace';
 
-    // Status
     ctx.fillStyle = statusColor;
     ctx.fillText(status, x, y);
-    y += lineHeight;
 
+    // Day/night badge
+    ctx.fillStyle = todColor;
+    ctx.font = '600 11px "JetBrains Mono", monospace';
+    ctx.fillText(timeOfDay, x + 140, y);
+
+    y += lineHeight;
     ctx.font = '400 13px "JetBrains Mono", monospace';
     ctx.fillStyle = CONFIG.colors.uiText;
     ctx.fillText(`Time: ${timeStr}`, x, y);
     y += lineHeight + 4;
 
-    // Population counts
     ctx.fillStyle = CONFIG.colors.human;
     ctx.fillText(`Humans:   ${stats.humans}`, x, y);
     y += lineHeight;
@@ -191,5 +274,48 @@ export class Renderer {
 
     ctx.fillStyle = CONFIG.colors.dead;
     ctx.fillText(`Dead:     ${stats.dead}`, x, y);
+  }
+
+  drawSparkline(history: PopSample[]): void {
+    if (history.length < 2) return;
+
+    const { ctx } = this;
+    const x = 10;
+    const y = this.canvas.height - 100;
+    const w = 200;
+    const h = 60;
+
+    // Background
+    ctx.fillStyle = CONFIG.colors.uiBackground;
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, 6);
+    ctx.fill();
+
+    const maxPop = Math.max(
+      ...history.map(s => s.humans + s.infected + s.zombies),
+      1,
+    );
+
+    const padX = 6;
+    const padY = 6;
+    const plotW = w - padX * 2;
+    const plotH = h - padY * 2;
+
+    const drawLine = (getValue: (s: PopSample) => number, color: string) => {
+      ctx.beginPath();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.5;
+      for (let i = 0; i < history.length; i++) {
+        const px = x + padX + (i / (history.length - 1)) * plotW;
+        const py = y + padY + plotH - (getValue(history[i]) / maxPop) * plotH;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+    };
+
+    drawLine(s => s.humans, CONFIG.colors.human);
+    drawLine(s => s.zombies, '#cc0000');
+    drawLine(s => s.infected, CONFIG.colors.infected);
   }
 }

@@ -10,6 +10,15 @@ export const CONFIG = {
   humanSpeed: 2.2,
   infectedSpeed: 1.2,
   zombieSpeed: 1.4,
+  runnerSpeed: 3.2,
+  tankSpeed: 0.8,
+
+  // Zombie variants
+  runnerHp: 1,
+  shamblerHp: 2,
+  tankHp: 6,
+  tankRadius: 7,
+  runnerLifespan: 600, // ~10s at 60fps before runner dies
 
   // Perception radii (px)
   humanFleeRadius: 120,
@@ -19,7 +28,10 @@ export const CONFIG = {
 
   // Infection
   biteRange: 10,
-  incubationFrames: { min: 300, max: 900 }, // 5–15 seconds at 60fps
+  incubationFrames: { min: 300, max: 900 },
+
+  // Variant spawn weights (when infected turns)
+  variantWeights: { shambler: 0.6, runner: 0.25, tank: 0.15 },
 
   // Steering weights
   fleeWeight: 3.0,
@@ -28,15 +40,28 @@ export const CONFIG = {
   cohesionWeight: 0.3,
   wanderWeight: 0.8,
   zombieCohesionWeight: 0.15,
+  obstacleAvoidWeight: 5.0,
 
   // Wander
-  wanderJitter: 0.3, // radians per frame max change
+  wanderJitter: 0.3,
 
   // Trails
   trailLength: 8,
 
   // Spatial grid
-  cellSize: 200, // should be >= largest perception radius
+  cellSize: 200,
+
+  // Day/night cycle
+  dayNightCycleDuration: 3600, // frames per full cycle (~60s)
+  nightSpeedMultiplier: 1.4,
+
+  // Sparkline
+  sparklineMaxSamples: 200,
+  sparklineSampleInterval: 15,
+
+  // Heatmap
+  heatmapCellSize: 20,
+  heatmapMaxAlpha: 0.6,
 
   // Colors
   colors: {
@@ -46,11 +71,16 @@ export const CONFIG = {
     infected: '#ff6b35',
     infectedAlt: '#ff2e2e',
     zombie: '#8b0000',
+    runner: '#cc3300',
+    tank: '#4a0020',
     zombieTrail: 'rgba(139, 0, 0, 0.25)',
     dead: '#333333',
     patientZeroRing: '#ffffff',
     uiBackground: 'rgba(10, 10, 15, 0.85)',
     uiText: '#c8c8d0',
     uiAccent: '#ff2e2e',
+    obstacle: '#1a1a2e',
+    obstacleBorder: '#2a2a3e',
+    nightOverlay: 'rgba(0, 0, 20, 0.35)',
   },
 } as const;

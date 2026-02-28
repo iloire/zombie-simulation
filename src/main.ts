@@ -1,10 +1,11 @@
 import './style.css';
 import { Simulation } from './simulation.ts';
 import { Renderer } from './renderer.ts';
+import { SoundEngine } from './sound.ts';
 
-// --- Canvas setup ---
 const canvas = document.getElementById('canvas') as HTMLCanvasElement;
 const renderer = new Renderer(canvas);
+const sound = new SoundEngine();
 
 function resize(): void {
   canvas.width = window.innerWidth;
@@ -19,11 +20,13 @@ window.addEventListener('resize', resize);
 // --- UI Controls ---
 const btnPause = document.getElementById('btn-pause') as HTMLButtonElement;
 const btnRestart = document.getElementById('btn-restart') as HTMLButtonElement;
+const btnHeatmap = document.getElementById('btn-heatmap') as HTMLButtonElement;
 const speedSlider = document.getElementById('speed-slider') as HTMLInputElement;
 const speedValue = document.getElementById('speed-value') as HTMLSpanElement;
 
 let paused = false;
 let speed = 1;
+let showHeatmap = false;
 
 btnPause.addEventListener('click', () => {
   paused = !paused;
@@ -41,10 +44,32 @@ speedSlider.addEventListener('input', () => {
   speedValue.textContent = `${speed}x`;
 });
 
-// Click to place zombie
+btnHeatmap.addEventListener('click', () => {
+  showHeatmap = !showHeatmap;
+  btnHeatmap.textContent = showHeatmap ? 'Heatmap ON' : 'Heatmap';
+});
+
+// Keyboard shortcut for heatmap
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'h' || e.key === 'H') {
+    showHeatmap = !showHeatmap;
+    btnHeatmap.textContent = showHeatmap ? 'Heatmap ON' : 'Heatmap';
+  }
+  if (e.key === ' ') {
+    e.preventDefault();
+    paused = !paused;
+    btnPause.textContent = paused ? 'Play' : 'Pause';
+  }
+});
+
+// Click to place zombie (init sound on first interaction)
 canvas.addEventListener('click', (e) => {
+  sound.init();
   sim.addZombie(e.clientX, e.clientY);
 });
+
+// Init sound on any interaction
+window.addEventListener('keydown', () => sound.init(), { once: true });
 
 // --- Game loop ---
 function loop(): void {
@@ -57,9 +82,23 @@ function loop(): void {
     sim.tick();
   }
 
+  // Sound: infection stabs + night ambient
+  if (sim.lastInfections > 0) {
+    sound.playInfection();
+  }
+  sound.updateNight(sim.nightFactor);
+
+  // Render
   renderer.clear();
+  renderer.drawObstacles(sim.obstacles);
   renderer.drawAgents(sim.agents, sim.frame);
-  renderer.drawStats(sim.getStats());
+  if (showHeatmap) {
+    renderer.drawHeatmap(sim.agents);
+  }
+  renderer.drawNightOverlay(sim.nightFactor);
+  const stats = sim.getStats();
+  renderer.drawStats(stats, sim.nightFactor);
+  renderer.drawSparkline(sim.history);
 }
 
 requestAnimationFrame(loop);

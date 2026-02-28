@@ -7,6 +7,14 @@ export const AgentType = {
 
 export type AgentType = (typeof AgentType)[keyof typeof AgentType];
 
+export const ZombieVariant = {
+  Shambler: 0,
+  Runner: 1,
+  Tank: 2,
+} as const;
+
+export type ZombieVariant = (typeof ZombieVariant)[keyof typeof ZombieVariant];
+
 export interface Vec2 {
   x: number;
   y: number;
@@ -18,7 +26,17 @@ export interface AgentState {
   pos: Vec2;
   vel: Vec2;
   wanderAngle: number;
-  incubationTimer: number; // frames remaining until infected → zombie
+  incubationTimer: number;
   isPatientZero: boolean;
-  trail: Vec2[]; // recent positions for trail rendering
+  trail: Vec2[];
+  variant: ZombieVariant;
+  hp: number;
+  lifetime: number;
+}
+
+export interface Obstacle {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
 }
