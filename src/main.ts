@@ -90,7 +90,7 @@ function loop(): void {
 
   // Render
   const night = sim.nightFactor;
-  renderer.clear();
+  renderer.clear(night);
   renderer.drawObstacles(sim.obstacles, night);
   renderer.drawAgents(sim.agents, sim.frame, night);
   if (showHeatmap) {

@@ -16,30 +16,40 @@ export class Renderer {
     this.ctx = ctx;
   }
 
-  clear(): void {
+  clear(nightFactor: number): void {
     const { ctx, canvas } = this;
-    ctx.fillStyle = CONFIG.colors.background;
+
+    // Day: muted dark green-gray terrain (#1a2420)
+    // Night: deep near-black blue (#06060f)
+    const bgR = Math.round(26 - nightFactor * 20);
+    const bgG = Math.round(36 - nightFactor * 30);
+    const bgB = Math.round(32 - nightFactor * 17);
+    ctx.fillStyle = `rgb(${bgR}, ${bgG}, ${bgB})`;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+    // Vignette — warmer in day, cooler at night
+    const vigR = Math.round(nightFactor * 0);
+    const vigG = Math.round(nightFactor * 0);
+    const vigB = Math.round(nightFactor * 15);
     const gradient = ctx.createRadialGradient(
       canvas.width / 2, canvas.height / 2, canvas.width * 0.2,
       canvas.width / 2, canvas.height / 2, canvas.width * 0.7,
     );
     gradient.addColorStop(0, 'transparent');
-    gradient.addColorStop(1, 'rgba(0, 0, 0, 0.4)');
+    gradient.addColorStop(1, `rgba(${vigR}, ${vigG}, ${vigB}, 0.4)`);
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
 
   drawObstacles(obstacles: Obstacle[], nightFactor: number): void {
     const { ctx } = this;
-    // Interpolate obstacle colors between day and night
-    const r = Math.round(26 - nightFactor * 10);
-    const g = Math.round(26 - nightFactor * 10);
-    const b = Math.round(46 + nightFactor * 20);
-    const br = Math.round(42 - nightFactor * 12);
-    const bg = Math.round(42 - nightFactor * 12);
-    const bb = Math.round(62 + nightFactor * 30);
+    // Day: lighter gray-brown buildings | Night: dark blue-gray
+    const r = Math.round(42 - nightFactor * 26);
+    const g = Math.round(44 - nightFactor * 28);
+    const b = Math.round(48 + nightFactor * 12);
+    const br = Math.round(58 - nightFactor * 28);
+    const bg = Math.round(60 - nightFactor * 30);
+    const bb = Math.round(64 + nightFactor * 22);
 
     for (const obs of obstacles) {
       ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;

@@ -2,6 +2,8 @@
 
 A 2D agent-based zombie outbreak simulation on HTML Canvas. Watch Patient Zero spark a slow infection that tips into full apocalypse as emergent hordes form, survivors flee, and buildings become death traps.
 
+**[Live Demo](https://iloire.github.io/zombie-simulation/)**
+
 ![Simulation screenshot — CRITICAL outbreak at night with 126 humans, 50 infected, 113 zombies](screenshots/v1.png)
 
 ## Run
